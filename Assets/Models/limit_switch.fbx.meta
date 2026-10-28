@@ -3,10 +3,15 @@ guid: c4bdeb9534ebf404a8da2946a39d4b62
 ModelImporter:
   serializedVersion: 24600
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: mat_plastic_black
+    second: {fileID: 2100000, guid: 39ef522fd6c838849850bd5df37ecbed, type: 2}
   materials:
-    materialImportMode: 2
-    materialName: 0
+    materialImportMode: 1
+    materialName: 1
     materialSearch: 1
     materialLocation: 1
     searchTexturesGlobally: 0

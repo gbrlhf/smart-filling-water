@@ -3,10 +3,20 @@ guid: 60a66a874337c3f4ea3bb2823517ea13
 ModelImporter:
   serializedVersion: 24600
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: mat_metal
+    second: {fileID: 2100000, guid: b66fb2107b5e876499a6b044c7a24080, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: mat_plastic_white
+    second: {fileID: 2100000, guid: d3aed4cc35dbfd040b28d40806d6c108, type: 2}
   materials:
-    materialImportMode: 2
-    materialName: 0
+    materialImportMode: 1
+    materialName: 1
     materialSearch: 1
     materialLocation: 1
     searchTexturesGlobally: 0

@@ -3,10 +3,15 @@ guid: 894427b6c217d1e49af069c9e374eaa7
 ModelImporter:
   serializedVersion: 24600
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: mat_led_gpio23
+    second: {fileID: 2100000, guid: 110bc3d3541788e449ab8cfd9a9ba6be, type: 2}
   materials:
-    materialImportMode: 2
-    materialName: 0
+    materialImportMode: 1
+    materialName: 1
     materialSearch: 1
     materialLocation: 1
     searchTexturesGlobally: 0

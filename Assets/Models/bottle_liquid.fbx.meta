@@ -3,10 +3,15 @@ guid: 44e1cb307aefa5a4f868172771d96d90
 ModelImporter:
   serializedVersion: 24600
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: mat_liquid
+    second: {fileID: 2100000, guid: b005015e15ab14146af2e4b31b41cd07, type: 2}
   materials:
-    materialImportMode: 2
-    materialName: 0
+    materialImportMode: 1
+    materialName: 1
     materialSearch: 1
     materialLocation: 1
     searchTexturesGlobally: 0

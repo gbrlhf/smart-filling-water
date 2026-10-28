@@ -3,10 +3,15 @@ guid: 526c6f3ec31f5554cacb1250aeadb596
 ModelImporter:
   serializedVersion: 24600
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: mat_rubber
+    second: {fileID: 2100000, guid: 855ad8b6fd808e14181e9902c61a9726, type: 2}
   materials:
-    materialImportMode: 2
-    materialName: 0
+    materialImportMode: 1
+    materialName: 1
     materialSearch: 1
     materialLocation: 1
     searchTexturesGlobally: 0
