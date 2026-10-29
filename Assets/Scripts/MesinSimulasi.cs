@@ -18,6 +18,9 @@ public class MesinSimulasi : MonoBehaviour
     public bool infeedOtomatis = true;   // nanti diganti operator
     public int kapasitasKotak = 30;
 
+    [Header("Tampilan")]
+    public Material materialTeks;        // mat_teks_dunia (shader MesinPengisi/TeksDunia)
+
     const int JumlahSlot = 10;
     const float SudutSlot = 36f;
     const float SudutInfeed = 36f, SudutIsi = 180f, SudutTutup = 144f, SudutBuang = 108f;
@@ -361,6 +364,21 @@ public class MesinSimulasi : MonoBehaviour
         }
     }
 
+    // Dipakai operator: slot infeed kosong, turret diam, dan sisa waktu diam cukup untuk menaruh botol.
+    public bool BisaTerimaBotol(float butuhDetik) =>
+        StatusMesin.I.Mode == ModeMesin.Berjalan && diamDimulai
+        && slot[SlotDi(SudutInfeed, langkah + 1)] == null
+        && durasiPutar + durasiDiam - tLangkah >= butuhDetik;
+
+    public bool TerimaBotol()
+    {
+        if (!diamDimulai) return false;
+        int k = SlotDi(SudutInfeed, langkah + 1);
+        if (slot[k] != null) return false;
+        slot[k] = BuatBotol(k);
+        return true;
+    }
+
     public void KosongkanKotak()
     {
         foreach (var go in diKotak) Destroy(go);
@@ -452,7 +470,7 @@ public class MesinSimulasi : MonoBehaviour
         return go.transform;
     }
 
-    static TextMesh BuatTeks(Transform papan, Vector3 geser, float ukuran, string isi)
+    TextMesh BuatTeks(Transform papan, Vector3 geser, float ukuran, string isi)
     {
         var go = new GameObject("teks");
         var b = papan.GetComponent<Renderer>().bounds;
@@ -461,7 +479,8 @@ public class MesinSimulasi : MonoBehaviour
         var t = go.AddComponent<TextMesh>();
         var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         t.font = font;
-        go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+        // material font bawaan tembus benda saat ada OnGUI; pakai shader teks dengan uji kedalaman normal
+        go.GetComponent<MeshRenderer>().sharedMaterial = new Material(materialTeks) { mainTexture = font.material.mainTexture };
         t.fontSize = 64; t.characterSize = ukuran; t.anchor = TextAnchor.MiddleCenter; t.alignment = TextAlignment.Center;
         t.color = new Color(0.3f, 1f, 0.4f);
         t.text = isi;

@@ -26,6 +26,7 @@ public class PemainFPS : MonoBehaviour
     Interaktif sasaran;
     bool modeOrbit;
     GUIStyle gayaTengah;
+    OperatorController operatorMesin;
 
     const int IgnoreRaycast = 2;   // layer pemain, supaya raycast tidak kena badan sendiri
 
@@ -33,6 +34,7 @@ public class PemainFPS : MonoBehaviour
     {
         gameObject.layer = IgnoreRaycast;
         cc = GetComponent<CharacterController>();
+        operatorMesin = FindAnyObjectByType<OperatorController>();
         yaw = transform.eulerAngles.y;
         mata = tinggiMata;
         SetModeOrbit(false);
@@ -128,13 +130,15 @@ public class PemainFPS : MonoBehaviour
         {
             var listrik = !st.mcbUtama ? "MATI" : "ADA";
             var sim = MesinSimulasi.I;
-            GUI.Box(new Rect(10, 10, 300, sim ? 96 : 52), GUIContent.none);
+            GUI.Box(new Rect(10, 10, 300, sim ? (operatorMesin ? 118 : 96) : 52), GUIContent.none);
             GUI.Label(new Rect(18, 14, 290, 22), "Listrik: " + listrik + "    Mesin: " + st.Mode.ToString().ToUpper());
             GUI.Label(new Rect(18, 36, 290, 22), "MCB  U:" + Onoff(st.mcbUtama) + "  M:" + Onoff(st.mcbMesin) + "  K:" + Onoff(st.mcbKontrol) + "  L:" + Onoff(st.mcbLampu));
             if (sim)
             {
                 GUI.Label(new Rect(18, 58, 290, 22), "Botol selesai: " + sim.Selesai + "    Kotak: " + sim.IsiKotak + "/" + sim.kapasitasKotak);
                 GUI.Label(new Rect(18, 80, 290, 22), "Tahap: " + (st.Mode == ModeMesin.Berjalan ? sim.Tahap : "-"));
+                if (operatorMesin)
+                    GUI.Label(new Rect(18, 102, 290, 22), "Operator: " + operatorMesin.Tugas + "    Peti: " + operatorMesin.SisaPeti + "/" + operatorMesin.KapasitasPeti);
             }
             if (Time.time - st.WaktuPesan < 3f)
                 GUI.Label(new Rect(cx - 250, cy + 50, 500, 26), st.Pesan, gayaTengah);
