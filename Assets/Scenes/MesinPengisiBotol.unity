@@ -5707,6 +5707,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c4b814cf2f182b649bdea25eb4ebaf9d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 910727692}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c4b814cf2f182b649bdea25eb4ebaf9d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 910727695}
   m_SourcePrefab: {fileID: 100100000, guid: c4b814cf2f182b649bdea25eb4ebaf9d, type: 3}
 --- !u!4 &910727689 stripped
 Transform:
@@ -5735,6 +5738,21 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -661698805751458024, guid: c4b814cf2f182b649bdea25eb4ebaf9d, type: 3}
+--- !u!114 &910727695
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 199568537}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be55faa5d80d6fe4596a6c67be6edcb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KotakPenampung
+  ukuranKlikMin: 0.04
+  klikTembus: 1
+  simulasi: {fileID: 1932996059}
 --- !u!1 &931631213 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -2607910534537634753, guid: cd573fb9b106288448d7f9facc59d7b2, type: 3}
@@ -12691,6 +12709,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1932996057}
   - component: {fileID: 1932996058}
+  - component: {fileID: 1932996059}
   m_Layer: 0
   m_Name: Interaksi
   m_TagString: Untagged
@@ -12745,6 +12764,22 @@ MonoBehaviour:
   - {fileID: 1891982031}
   lampuPower: {fileID: 1372711158}
   lampuFault: {fileID: 1159854299}
+--- !u!114 &1932996059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1932996056}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7419c3dc441b1d54cbee292936682e74, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MesinSimulasi
+  durasiPutar: 0.8
+  durasiDiam: 2.6
+  infeedOtomatis: 1
+  kapasitasKotak: 30
 --- !u!1 &1945475683 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: c6377aeb3de2d5149b660f95270706f7, type: 3}

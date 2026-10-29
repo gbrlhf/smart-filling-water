@@ -57,6 +57,14 @@ public class StatusMesin : MonoBehaviour
         Kabar("START: mesin berjalan");
     }
 
+    // Dipanggil simulasi saat mesin harus berhenti sendiri (mis. kotak penampung penuh).
+    public void Henti(string alasan)
+    {
+        jalan = false;
+        Hitung();
+        Kabar(alasan);
+    }
+
     public void SetDarurat(bool tekan)
     {
         Darurat = tekan;
@@ -118,7 +126,7 @@ public class StatusMesin : MonoBehaviour
         r.SetPropertyBlock(mpb);
     }
 
-    void Kabar(string s)
+    public void Kabar(string s)
     {
         Pesan = s;
         WaktuPesan = Time.time;
