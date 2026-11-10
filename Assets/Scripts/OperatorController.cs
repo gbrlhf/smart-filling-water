@@ -2,9 +2,24 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Operator mesin: setelah START pertama, berjalan ke belakang mesin, lalu terus
-// mengambil botol kosong dari peti dan menaruhnya di slot infeed saat turret berhenti.
-// Animasi Humanoid diputar di tempat; posisi & arah digerakkan skrip lewat grup induknya.
+public enum ModeOperator
+{
+    Setup,
+    Infeed,
+    Packaging,
+    Restock
+}
+
+// Siklus lengkap Operator MES:
+// 1. SETUP / MATERIAL FETCH: Saat START ditekan, meja infeed awalnya kosong. Operator berjalan ke Rak Penyimpanan Besi
+//    (lantai atas kanan), mengambil peti berisi 12 botol kosong, membawanya ke meja infeed, dan meletakkannya.
+//    Durasi ini dicatat sebagai Machine Setup / Preparation Time.
+// 2. PRODUKSI / INFEED: Operator mengambil botol satu per satu dari peti dan menaruhnya ke slot infeed turret.
+// 3. SECONDARY PACKAGING (END-OF-BATCH): Ketika 12 botol dari peti habis dimasukkan dan seluruh botol selesai dipilah
+//    ke Kotak OK / Kotak Reject (BATCH COMPLETED), operator beralih ke Tugas = "Pengemasan ke Kardus":
+//    mengambil kardus kosong, berjalan ke Kotak OK, memindahkan botol OK ke kardus, menutup kardus, dan menumpuknya
+//    di Palet Samping (Finished Goods Staging Area), lalu mencatat Batch Cycle Time & First Pass Yield (FPY).
+// 4. Siklus berlanjut ke batch berikutnya (mengambil peti baru di rak).
 [RequireComponent(typeof(Animator))]
 public class OperatorController : MonoBehaviour
 {
@@ -15,16 +30,29 @@ public class OperatorController : MonoBehaviour
     public float kecepatanPutar = 360f;   // derajat per detik
     public float kecepatanAnimasi = 2.4f;
 
-    [Tooltip("Titik jalan dari posisi awal ke titik berdiri kerja (y diabaikan)")]
-    public Vector3[] rute =
-    {
-        new Vector3(1.50f, 0f, 0.60f),
-        new Vector3(1.50f, 0f, -1.15f),
-        new Vector3(0.47f, 0f, -1.15f),
-    };
-
+    [Header("Titik Rute & Koordinat Area Kerja")]
     [Tooltip("Tempat berdiri kerja: dari sini tangan kanan tepat di atas slot infeed saat animasi place")]
     public Vector3 posisiKerja = new Vector3(0.37f, 0f, -0.86f);
+
+    [Tooltip("Titik berdiri di depan Rak Penyimpanan Besi (sebelah kanan) untuk mengambil peti botol kosong")]
+    public Vector3 posisiRakPeti = new Vector3(-0.92f, 0f, -2.15f);
+    public Vector3 titikLihatRakPeti = new Vector3(-0.92f, 1.45f, -2.68f);
+
+    [Tooltip("Titik berdiri di samping Meja Infeed untuk meletakkan peti botol")]
+    public Vector3 posisiTaruhPeti = new Vector3(0.68f, 0f, -0.95f);
+    public Vector3 titikLihatMejaPeti = new Vector3(1.00f, 0.85f, -0.60f);
+
+    [Tooltip("Titik berdiri di depan Kardus Kemasan Kosong untuk Secondary Packaging")]
+    public Vector3 posisiAmbilKardus = new Vector3(-2.30f, 0f, -1.85f);
+    public Vector3 titikLihatKardus = new Vector3(-2.70f, 0.30f, -2.10f);
+
+    [Tooltip("Titik berdiri di samping Kotak Penampung OK saat mengemas botol OK ke dalam kardus")]
+    public Vector3 posisiKotakOk = new Vector3(0.60f, 0f, -0.68f);
+    public Vector3 titikLihatKotakOk = new Vector3(0.60f, 0.53f, -0.18f);
+
+    [Tooltip("Titik berdiri di dekat Palet Penumpukan (Finished Goods Staging Area) untuk menyimpan kardus jadi")]
+    public Vector3 posisiPaletStaging = new Vector3(-2.35f, 0f, -1.30f);
+    public Vector3 titikLihatPaletStaging = new Vector3(-3.10f, 0.25f, -1.30f);
 
     // waktu kejadian di dalam klip (detik, sebelum dikali kecepatan)
     const float DurasiAmbil = 1.46f, SaatPegang = 0.55f;
@@ -34,18 +62,22 @@ public class OperatorController : MonoBehaviour
     const float TinggiLeher = 0.17f;      // dari dasar botol ke leher
 
     Animator an;
-    Transform grup, pegangan, titikInfeed;
+    Transform grup, pegangan, tanganKiri, dada, titikInfeed;
+    Transform petiMejaBody, petiRakGroup, templatKardus, paletStaging;
     Vector3 posGrup0, offsetBadan;
     Quaternion rotGrup0;
     float yawAwal, yaw;
     Vector3 posisi;
     readonly List<GameObject> botolPeti = new();
-    GameObject dibawa;
+    readonly List<GameObject> kardusDiPalet = new();
+    GameObject dibawa, petiDibawa, kardusDibawa;
 
+    public ModeOperator ModeKerja { get; private set; } = ModeOperator.Setup;
     public string Tugas { get; private set; } = "Menunggu START";
+    public int BatchKe { get; private set; }
+    public int JumlahRestock { get; private set; }
     public int SisaPeti { get { int n = 0; foreach (var b in botolPeti) if (b.activeSelf) n++; return n; } }
     public int KapasitasPeti => botolPeti.Count;
-    public bool AdaPasokanBotol => dibawa != null || SisaPeti > 0;
 
     void Awake()
     {
@@ -54,7 +86,16 @@ public class OperatorController : MonoBehaviour
         grup = transform.parent;
         var root = grup.parent;
         pegangan = Cari(an.GetBoneTransform(HumanBodyBones.RightHand), "hand_hold_R");
+        tanganKiri = an.GetBoneTransform(HumanBodyBones.LeftHand);
+        dada = an.GetBoneTransform(HumanBodyBones.Chest);
         titikInfeed = Cari(root, "infeed_place_point");
+
+        var grupPetiMeja = root.Find("Peti/bottle_crate");
+        if (grupPetiMeja) petiMejaBody = grupPetiMeja.Find("bottle_crate");
+        petiRakGroup = Cari(root, "shelf_filled_crate");
+        templatKardus = Cari(root, "karton_pack_01");
+        paletStaging = Cari(root, "pallet_empty");
+
         for (int i = 1; i <= 12; i++) botolPeti.Add(Cari(root, "crate_bottle_" + i.ToString("00")).gameObject);
 
         // posisi dan arah badan awal (pose bind), dipakai untuk menggerakkan grup secara kaku
@@ -72,8 +113,17 @@ public class OperatorController : MonoBehaviour
     {
         an.speed = kecepatanAnimasi;
         simulasi.infeedOtomatis = false;
-        simulasi.operatorPemasok = this;
+        // Kondisi Awal (Initial State): Meja infeed di samping mesin KOSONG (belum ada peti & botol)
+        // sedangkan peti berisi botol kosong berada di Rak Penyimpanan Besi (lantai atas sebelah kanan)
+        SetPetiMejaAktif(false);
+        if (petiRakGroup) petiRakGroup.gameObject.SetActive(true);
         StartCoroutine(Kerja());
+    }
+
+    void SetPetiMejaAktif(bool aktif)
+    {
+        if (petiMejaBody) petiMejaBody.gameObject.SetActive(aktif);
+        foreach (var b in botolPeti) b.SetActive(aktif);
     }
 
     IEnumerator Kerja()
@@ -81,44 +131,243 @@ public class OperatorController : MonoBehaviour
         Main("idle");
         while (StatusMesin.I.Mode != ModeMesin.Berjalan) yield return null;
 
-        Tugas = "Berjalan ke posisi kerja";
-        foreach (var t in rute) yield return JalanKe(t);
-        yield return JalanKe(posisiKerja);
+        // Rute awal dari depan ruangan menuju koridor belakang mesin
+        Tugas = "Berjalan ke Rak Penyimpanan";
+        yield return JalanKe(new Vector3(1.50f, 0f, 0.60f));
+        yield return JalanKe(new Vector3(1.50f, 0f, -1.25f));
 
         while (true)
         {
-            if (!dibawa)
+            BatchKe++;
+            float waktuMulaiBatch = Time.time;
+
+            // =================================================================
+            // TAHAP 1: SETUP / MATERIAL FETCH (Ambil Peti Botol dari Rak Besi)
+            // =================================================================
+            simulasi.BatchCompleted = false;
+            simulasi.SetupSelesai = false;
+            ModeKerja = ModeOperator.Setup;
+
+            float waktuMulaiSetup = Time.time;
+            yield return SiklusAmbilPetiDariRak(waktuMulaiSetup);
+            simulasi.SetupTime = Time.time - waktuMulaiSetup;
+            simulasi.SetupSelesai = true;
+
+            // =================================================================
+            // TAHAP 2: SIKLUS PRODUKSI MESIN (Infeed 12 Botol ke Turret)
+            // =================================================================
+            ModeKerja = ModeOperator.Infeed;
+            yield return JalanKe(posisiKerja);
+
+            while (SisaPeti > 0 || dibawa != null)
             {
-                var botol = BotolTerdekat();
-                if (!botol)
+                while (StatusMesin.I.Mode != ModeMesin.Berjalan)
                 {
-                    Tugas = "Peti kosong";
-                    StatusMesin.I.Kabar("Peti botol kosong: isi ulang peti");
                     Main("idle");
-                    while (!BotolTerdekat()) yield return null;
-                    continue;
+                    yield return null;
                 }
-                Tugas = "Mengambil botol";
-                yield return Hadap(botol.transform.position);
-                Main("pick");
-                yield return Tunggu(SaatPegang);
-                Pegang(botol);
-                yield return Tunggu(DurasiAmbil - SaatPegang);
+
+                if (!dibawa)
+                {
+                    var botol = BotolTerdekat();
+                    if (!botol) break;
+
+                    Tugas = "Infeed: Mengambil botol (" + SisaPeti + " sisa)";
+                    yield return Hadap(botol.transform.position);
+                    Main("pick");
+                    yield return Tunggu(SaatPegang);
+                    PegangBotol(botol);
+                    yield return Tunggu(DurasiAmbil - SaatPegang);
+                }
+
+                Tugas = "Infeed: Menunggu slot turret";
+                yield return Hadap(titikInfeed.position);
+                Main("idle");
+                while (!simulasi.BisaTerimaBotol(SaatLepas / kecepatanAnimasi + DurasiMasukSlot + 0.15f))
+                {
+                    simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
+                    yield return null;
+                }
+
+                Tugas = "Infeed: Menaruh botol ke turret";
+                Main("place");
+                yield return Tunggu(SaatLepas);
+                yield return MasukkanKeSlot();
+                yield return Tunggu(DurasiTaruh - SaatLepas - DurasiMasukSlot * kecepatanAnimasi);
+                Main("return");
+                yield return Tunggu(DurasiKembali);
+                simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
             }
 
-            Tugas = "Menunggu slot infeed";
+            // Tunggu sampai seluruh botol dari peti selesai diisi, ditutup, dan dipilah ke Kotak OK / Reject
+            Tugas = "Menunggu seluruh botol batch selesai diproses";
             yield return Hadap(titikInfeed.position);
             Main("idle");
-            while (!simulasi.BisaTerimaBotol(SaatLepas / kecepatanAnimasi + DurasiMasukSlot + 0.15f)) yield return null;
+            while (!simulasi.TurretDanJatuhKosong)
+            {
+                simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
+                yield return null;
+            }
 
-            Tugas = "Menaruh botol";
-            Main("place");
-            yield return Tunggu(SaatLepas);
-            yield return MasukkanKeSlot();
-            yield return Tunggu(DurasiTaruh - SaatLepas - DurasiMasukSlot * kecepatanAnimasi);
-            Main("return");
-            yield return Tunggu(DurasiKembali);
+            // =================================================================
+            // TAHAP 3: BATCH COMPLETED & SECONDARY PACKAGING KE KARDUS
+            // =================================================================
+            simulasi.BatchCompleted = true;
+            ModeKerja = ModeOperator.Packaging;
+            Tugas = "Pengemasan ke Kardus";
+            StatusMesin.I.Kabar("BATCH #" + BatchKe + " COMPLETED! Operator memulai pengemasan ke kardus...");
+
+            yield return SiklusPengemasanKardus(waktuMulaiBatch);
+
+            simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
+            StatusMesin.I.Kabar("Batch #" + BatchKe + " selesai! Cycle Time: " + simulasi.BatchCycleTime.ToString("F1")
+                + "s | FPY: " + simulasi.FirstPassYield.ToString("F1") + "%");
+
+            yield return new WaitForSeconds(1.2f);
+
+            // Siapkan kembali peti di rak untuk siklus batch berikutnya
+            SetPetiMejaAktif(false);
+            if (petiRakGroup) petiRakGroup.gameObject.SetActive(true);
         }
+    }
+
+    IEnumerator SiklusAmbilPetiDariRak(float t0)
+    {
+        Tugas = "Setup: Jalan ke Rak Penyimpanan";
+        StatusMesin.I.Kabar("SETUP: Operator mengambil peti botol kosong dari rak penyimpanan...");
+
+        yield return JalanKe(new Vector3(0.45f, 0f, -1.35f));
+        yield return JalanKe(posisiRakPeti);
+        yield return Hadap(titikLihatRakPeti);
+        simulasi.SetupTime = Time.time - t0;
+
+        // Animasi mengambil / mengangkat peti botol dari rak atas
+        Tugas = "Setup: Mengangkat peti dari rak";
+        Main("pick");
+        yield return Tunggu(SaatPegang);
+        if (petiRakGroup) petiRakGroup.gameObject.SetActive(false);
+        BuatPetiDibawa();
+        yield return Tunggu(DurasiAmbil - SaatPegang);
+        simulasi.SetupTime = Time.time - t0;
+
+        // Berjalan membawa peti menuju meja infeed di samping mesin
+        Tugas = "Setup: Membawa peti ke Meja Infeed";
+        yield return JalanKe(new Vector3(0.45f, 0f, -1.35f));
+        yield return JalanKe(posisiTaruhPeti);
+        yield return Hadap(titikLihatMejaPeti);
+        simulasi.SetupTime = Time.time - t0;
+
+        // Meletakkan peti di atas meja infeed
+        Tugas = "Setup: Meletakkan peti di Meja Infeed";
+        Main("place");
+        yield return Tunggu(SaatLepas);
+        if (petiDibawa) { Destroy(petiDibawa); petiDibawa = null; }
+        SetPetiMejaAktif(true);
+        JumlahRestock++;
+        StatusMesin.I.Kabar("Peti botol diletakkan di meja infeed (12 botol siap). Siklus dimulai!");
+        yield return Tunggu(DurasiTaruh - SaatPegang);
+        Main("return");
+        yield return Tunggu(DurasiKembali);
+    }
+
+    IEnumerator SiklusPengemasanKardus(float waktuMulaiBatch)
+    {
+        // 1. Berjalan ke area penyimpanan untuk mengambil kardus kemasan kosong
+        Tugas = "Pengemasan ke Kardus (Ambil kardus)";
+        yield return JalanKe(new Vector3(0.45f, 0f, -1.35f));
+        yield return JalanKe(new Vector3(-1.60f, 0f, -1.35f));
+        yield return JalanKe(posisiAmbilKardus);
+        yield return Hadap(titikLihatKardus);
+        simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
+
+        Main("pick");
+        yield return Tunggu(SaatPegang);
+        BuatKardusDibawa();
+        yield return Tunggu(DurasiAmbil - SaatPegang);
+
+        // 2. Berjalan membawa kardus ke dekat Kotak Penampung OK
+        Tugas = "Pengemasan ke Kardus (Ke Kotak OK)";
+        yield return JalanKe(new Vector3(-1.60f, 0f, -1.35f));
+        yield return JalanKe(new Vector3(0.60f, 0f, -1.35f));
+        yield return JalanKe(posisiKotakOk);
+        yield return Hadap(titikLihatKotakOk);
+        simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
+
+        // 3. Memindahkan botol-botol OK dari Kotak OK ke dalam kardus kemasan & menutup kardus
+        Tugas = "Pengemasan ke Kardus (Isi & tutup kardus)";
+        Main("place");
+        yield return Tunggu(SaatLepas);
+        int jmlOk = simulasi.KemasBotolOkKeKardus();
+        StatusMesin.I.Kabar("Mengemas " + jmlOk + " botol OK ke dalam kardus kemasan...");
+        yield return Tunggu(DurasiTaruh - SaatLepas);
+        Main("pick");
+        yield return Tunggu(DurasiAmbil);
+        simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
+
+        // 4. Mengangkat kardus jadi dan memindahkannya ke Palet Samping (Finished Goods Staging Area)
+        Tugas = "Pengemasan ke Kardus (Simpan ke Palet)";
+        yield return JalanKe(new Vector3(0.60f, 0f, -1.35f));
+        yield return JalanKe(posisiPaletStaging);
+        yield return Hadap(titikLihatPaletStaging);
+        simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
+
+        Main("place");
+        yield return Tunggu(SaatLepas);
+        TaruhKardusDiPalet();
+        yield return Tunggu(DurasiTaruh - SaatLepas);
+        Main("return");
+        yield return Tunggu(DurasiKembali);
+    }
+
+    void BuatPetiDibawa()
+    {
+        if (petiDibawa) Destroy(petiDibawa);
+        if (!petiRakGroup) return;
+        petiDibawa = Instantiate(petiRakGroup.gameObject);
+        petiDibawa.SetActive(true);
+        petiDibawa.name = "peti_dibawa_operator";
+        foreach (var c in petiDibawa.GetComponentsInChildren<Collider>()) Destroy(c);
+        petiDibawa.transform.localScale = Vector3.one * 0.85f;
+        // Dipegang di depan dada / kedua tangan operator
+        Transform indukPegang = dada ? dada : pegangan;
+        petiDibawa.transform.SetParent(indukPegang, false);
+        petiDibawa.transform.localPosition = new Vector3(0f, -0.05f, -0.26f);
+        petiDibawa.transform.localRotation = Quaternion.identity;
+    }
+
+    void BuatKardusDibawa()
+    {
+        if (kardusDibawa) Destroy(kardusDibawa);
+        if (!templatKardus) return;
+        kardusDibawa = Instantiate(templatKardus.gameObject);
+        kardusDibawa.SetActive(true);
+        kardusDibawa.name = "kardus_kemasan_dibawa";
+        foreach (var c in kardusDibawa.GetComponentsInChildren<Collider>()) Destroy(c);
+        kardusDibawa.transform.localScale = Vector3.one * 0.80f;
+        Transform indukPegang = dada ? dada : pegangan;
+        kardusDibawa.transform.SetParent(indukPegang, false);
+        kardusDibawa.transform.localPosition = new Vector3(0f, -0.08f, -0.25f);
+        kardusDibawa.transform.localRotation = Quaternion.identity;
+    }
+
+    void TaruhKardusDiPalet()
+    {
+        if (kardusDibawa)
+        {
+            Destroy(kardusDibawa);
+            kardusDibawa = null;
+        }
+        if (!templatKardus) return;
+        int idx = kardusDiPalet.Count;
+        int kol = idx % 2, baris = (idx / 2) % 2, lapis = idx / 4;
+        Vector3 pPalet = paletStaging ? paletStaging.position : new Vector3(-3.10f, 0f, -1.30f);
+        Vector3 posSimpan = pPalet + new Vector3(-0.22f + kol * 0.44f, 0.144f + lapis * 0.305f, -0.18f + baris * 0.38f);
+
+        var kardusJadi = Instantiate(templatKardus.gameObject, grup.parent);
+        kardusJadi.name = "kardus_finished_goods_" + (idx + 1).ToString("00");
+        kardusJadi.SetActive(true);
+        kardusJadi.transform.SetPositionAndRotation(posSimpan, Quaternion.identity);
+        kardusDiPalet.Add(kardusJadi);
     }
 
     // botol dilepas dari tangan dan diluncurkan ke slot infeed (leher di titik slot)
@@ -146,6 +395,12 @@ public class OperatorController : MonoBehaviour
         Main("walk");
         while ((tujuan - posisi).magnitude > 0.01f)
         {
+            while (StatusMesin.I.Mode == ModeMesin.Darurat || !StatusMesin.I.AdaListrikKontrol)
+            {
+                Main("idle");
+                yield return null;
+                Main("walk");
+            }
             posisi = Vector3.MoveTowards(posisi, tujuan, kecepatanJalan * Time.deltaTime);
             var d = tujuan - posisi;
             if (d.sqrMagnitude > 1e-6f)
@@ -198,7 +453,7 @@ public class OperatorController : MonoBehaviour
         return terbaik;
     }
 
-    void Pegang(GameObject botolPetiAsal)
+    void PegangBotol(GameObject botolPetiAsal)
     {
         botolPetiAsal.SetActive(false);
         dibawa = Instantiate(botolPetiAsal);
@@ -212,8 +467,10 @@ public class OperatorController : MonoBehaviour
 
     public void IsiUlangPeti()
     {
-        foreach (var b in botolPeti) b.SetActive(true);
-        StatusMesin.I.Kabar("Peti diisi ulang: " + botolPeti.Count + " botol");
+        SetPetiMejaAktif(true);
+        simulasi.SetupSelesai = true;
+        simulasi.BatchCompleted = false;
+        StatusMesin.I.Kabar("Peti diisi ulang manual: " + botolPeti.Count + " botol");
     }
 
     static Transform Cari(Transform t, string n)
@@ -223,3 +480,5 @@ public class OperatorController : MonoBehaviour
         return null;
     }
 }
+
+

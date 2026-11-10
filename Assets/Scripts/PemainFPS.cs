@@ -130,18 +130,27 @@ public class PemainFPS : MonoBehaviour
         {
             var listrik = !st.mcbUtama ? "MATI" : "ADA";
             var sim = MesinSimulasi.I;
-            GUI.Box(new Rect(10, 10, 300, sim ? (operatorMesin ? 118 : 96) : 52), GUIContent.none);
-            GUI.Label(new Rect(18, 14, 290, 22), "Listrik: " + listrik + "    Mesin: " + st.Mode.ToString().ToUpper());
-            GUI.Label(new Rect(18, 36, 290, 22), "MCB  U:" + Onoff(st.mcbUtama) + "  M:" + Onoff(st.mcbMesin) + "  K:" + Onoff(st.mcbKontrol) + "  L:" + Onoff(st.mcbLampu));
+            GUI.Box(new Rect(10, 10, 420, sim ? (operatorMesin ? 210 : 164) : 52), GUIContent.none);
+            string statusMesinTeks = sim && sim.BatchCompleted
+                ? "BATCH COMPLETED"
+                : st.Mode.ToString().ToUpper() + (sim && sim.SedangStarving ? " [STARVING]" : "");
+            GUI.Label(new Rect(18, 14, 405, 22), "Listrik: " + listrik + "    Mesin: " + statusMesinTeks);
+            GUI.Label(new Rect(18, 36, 405, 22), "MCB  U:" + Onoff(st.mcbUtama) + "  M:" + Onoff(st.mcbMesin) + "  K:" + Onoff(st.mcbKontrol) + "  L:" + Onoff(st.mcbLampu));
             if (sim)
             {
-                GUI.Label(new Rect(18, 58, 290, 22), "Botol selesai: " + sim.Selesai + "    Kotak: " + sim.IsiKotak + "/" + sim.kapasitasKotak);
-                GUI.Label(new Rect(18, 80, 290, 22), "Tahap: " + (st.Mode == ModeMesin.Berjalan ? sim.Tahap : "-"));
+                GUI.Label(new Rect(18, 58, 405, 22), "Good (OK): " + sim.Selesai + " (" + sim.IsiKotak + "/" + sim.kapasitasKotak + ")   Reject (NG): " + sim.TotalReject + " (" + sim.IsiKotakReject + "/" + sim.kapasitasKotakReject + ")   FPY: " + sim.FirstPassYield.ToString("F1") + "%");
+                GUI.Label(new Rect(18, 80, 405, 22), "Defect -> IsiKurang: " + sim.RejectIsiKurang + "  TanpaTutup: " + sim.RejectTanpaTutup + "  QC: " + sim.StatusTerakhir);
+                GUI.Label(new Rect(18, 102, 405, 22), "Tahap: " + (st.Mode == ModeMesin.Berjalan ? sim.Tahap : (sim.BatchCompleted ? "BATCH COMPLETED" : "-")));
+                GUI.Label(new Rect(18, 124, 405, 22), "Setup: " + sim.SetupTime.ToString("F1") + "s  |  Cycle Time: " + sim.BatchCycleTime.ToString("F1") + "s  |  Starving: " + sim.StarvationDowntime.ToString("F1") + "s");
                 if (operatorMesin)
-                    GUI.Label(new Rect(18, 102, 290, 22), "Operator: " + operatorMesin.Tugas + "    Peti: " + operatorMesin.SisaPeti + "/" + operatorMesin.KapasitasPeti);
+                {
+                    GUI.Label(new Rect(18, 146, 405, 22), "Mode Op: " + operatorMesin.ModeKerja + " | " + operatorMesin.Tugas);
+                    GUI.Label(new Rect(18, 168, 405, 22), "Peti Infeed: " + operatorMesin.SisaPeti + "/" + operatorMesin.KapasitasPeti + " botol  |  Kardus Jadi: " + sim.KardusSelesai + " (" + sim.TotalDikemas + " btl)");
+                    GUI.Label(new Rect(18, 188, 405, 22), "Batch Ke-" + Mathf.Max(1, operatorMesin.BatchKe) + "  (Restock Rak: " + operatorMesin.JumlahRestock + "x)");
+                }
             }
-            if (Time.time - st.WaktuPesan < 3f)
-                GUI.Label(new Rect(cx - 250, cy + 50, 500, 26), st.Pesan, gayaTengah);
+            if (Time.time - st.WaktuPesan < 3.5f)
+                GUI.Label(new Rect(cx - 280, cy + 50, 560, 26), st.Pesan, gayaTengah);
         }
 
         GUI.Label(new Rect(10, Screen.height - 30, 900, 24),
