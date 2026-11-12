@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 // Kamera orbit untuk melihat mesin pengisi botol.
 // Klik kanan + geser: putar | Klik tengah + geser: geser | Scroll: zoom
-// WASD / Q E: pindah titik fokus | 1-5: sudut tetap | H: sembunyikan bantuan
+// WASD / Q E: pindah titik fokus | 1-6: sudut tetap | H: sembunyikan bantuan
 [RequireComponent(typeof(Camera))]
 public class KameraOrbit : MonoBehaviour
 {
@@ -23,10 +23,11 @@ public class KameraOrbit : MonoBehaviour
     public Sudut[] sudut =
     {
         new Sudut("Ruangan",       new Vector3(0f, 0.80f, -0.20f),    230f, 30f, 4.2f),
-        new Sudut("Mesin",         new Vector3(0f, 1.00f, -0.25f),    200f, 30f, 1.2f),
+        new Sudut("Mesin",         new Vector3(0.03f, 1.02f, -0.08f),    235f, 8f, 0.9f),
         new Sudut("Control box",   new Vector3(-0.90f, 0.85f, -0.43f), 150f, 45f, 0.65f),
         new Sudut("Capping",       new Vector3(0.14f, 1.05f, -0.08f), 235f, 20f, 0.75f),
         new Sudut("Panel listrik", new Vector3(-3.70f, 1.40f, 2.00f), 270f, 10f, 1.2f),
+        new Sudut("QC - OK dan Reject", new Vector3(0.34f, 0.74f, -0.06f), 255f, 32f, 1f),
     };
     public int sudutAwal = 0;
 
@@ -147,7 +148,7 @@ public class KameraOrbit : MonoBehaviour
         for (int i = 0; i < sudut.Length; i++)
             teks += (i == aktif ? "[" : "") + (i + 1) + " " + sudut[i].nama + (i == aktif ? "]" : "") + "   ";
         teks += "\nKlik kanan: putar   Klik tengah: geser   Scroll: zoom   WASD/QE: pindah fokus (Shift: cepat)   H: sembunyikan";
-        GUI.Box(new Rect(10, 10, 720, 46), GUIContent.none);
-        GUI.Label(new Rect(18, 14, 710, 40), teks);
+        GUI.Box(new Rect(10, 10, Mathf.Min(Screen.width - 20, 1100), 64), GUIContent.none);
+        GUI.Label(new Rect(18, 14, Mathf.Min(Screen.width - 36, 1080), 58), teks);
     }
 }

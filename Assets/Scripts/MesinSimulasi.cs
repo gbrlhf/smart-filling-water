@@ -73,7 +73,7 @@ public class MesinSimulasi : MonoBehaviour
     // referensi scene
     Transform pusat, turret, hub, bendera, poros;
     Transform nozzle, nozzleSlider, kepala, slider, chuck;
-    Transform diverter, pistonRod, sightGlassLiquid;
+    Transform diverter, pistonRod, sightGlassLiquid, airTangki;
     GameObject templatBotol, templatCairan, templatTutup;
     Renderer ledStep, ledDir, ledEn, ledPompa, ledBuzzer, ledIr, ledStart, ledLimit, ledQc;
     Transform aliran;
@@ -92,7 +92,7 @@ public class MesinSimulasi : MonoBehaviour
     bool diamDimulai, sedangIsi, sedangTutup;
     bool diverterAktif;
     float qcKedipSampai = -10f;
-    float levelTangki = 0.92f; // proporsi isi Sanitary Buffer Tank (maks 20 L)
+    const float levelTangki = 1f; // Suplai air bersih kontinu dari jaringan pusat.
     Botol bIsi, bTutup, bInfeed;
 
     public int Selesai { get; private set; }              // Total Good count (OK)
@@ -154,6 +154,7 @@ public class MesinSimulasi : MonoBehaviour
         kepala = Cari(root, "capper_head");
         slider = Cari(root, "capper_slider");
         chuck = Cari(root, "capper_chuck");
+        airTangki = Cari(root, "tank_visible_liquid");
         diverter = Cari(root, "reject_diverter");
         pistonRod = Cari(root, "pneumatic_piston_rod");
         if (pistonRod) posPistonAwal = pistonRod.localPosition;
@@ -434,7 +435,6 @@ public class MesinSimulasi : MonoBehaviour
         if (bIsi != null)
         {
             bIsi.sudahDiisi = true;
-            levelTangki = Mathf.Clamp(levelTangki - 0.015f * bIsi.targetIsi, 0.25f, 0.95f);
         }
         if (bTutup != null) bTutup.sudahLewatCapping = true;
         langkah++;
@@ -536,6 +536,12 @@ public class MesinSimulasi : MonoBehaviour
 
     void PerbaruiSightGlass()
     {
+        if (airTangki)
+        {
+            float tinggi = 0.155f * Mathf.Clamp01(levelTangki);
+            airTangki.localScale = new Vector3(0.232f, tinggi, 0.232f);
+            airTangki.localPosition = new Vector3(0f, 0.01f + tinggi, 0f);
+        }
         if (!sightGlassLiquid) return;
         float h = 0.115f * levelTangki;
         sightGlassLiquid.localScale = new Vector3(0.012f, h, 0.012f);
@@ -695,6 +701,8 @@ public class MesinSimulasi : MonoBehaviour
     }
 
     // Dipanggil operator saat Secondary Packaging: memindahkan semua botol OK dari Kotak OK ke dalam Kardus Kemasan
+    public GameObject[] BotolOkUntukDikemas() => diKotak.ToArray();
+
     public int KemasBotolOkKeKardus()
     {
         int n = diKotak.Count;
@@ -702,7 +710,6 @@ public class MesinSimulasi : MonoBehaviour
         diKotak.Clear();
         TotalDikemas += n;
         KardusSelesai++;
-        levelTangki = 0.92f; // isi ulang otomatis buffer tank untuk batch berikutnya
         return n;
     }
 
