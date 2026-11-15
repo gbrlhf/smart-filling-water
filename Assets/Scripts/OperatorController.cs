@@ -34,9 +34,16 @@ public class OperatorController : MonoBehaviour
     [Tooltip("Tempat berdiri kerja: dari sini tangan kanan tepat di atas slot infeed saat animasi place")]
     public Vector3 posisiKerja = new Vector3(0.37f, 0f, -0.86f);
 
-    [Tooltip("Titik berdiri di depan Rak Penyimpanan Besi (sebelah kanan) untuk mengambil peti botol kosong")]
+    [Tooltip("Titik berdiri di depan Rak Penyimpanan Besi (sebelah kanan) untuk mengambil botol kosong dari kardus rak & peti")]
+    public Vector3 posisiRakStokBotol = new Vector3(-1.35f, 0f, -2.12f);
+    public Vector3 titikLihatRakStokBotol = new Vector3(-1.48f, 1.48f, -2.68f);
     public Vector3 posisiRakPeti = new Vector3(-0.92f, 0f, -2.15f);
     public Vector3 titikLihatRakPeti = new Vector3(-0.92f, 1.45f, -2.68f);
+
+    [Header("Stok Botol Kosong di Kardus Rak Atas (Always Available)")]
+    [Tooltip("Daftar 12 botol kosong di dalam kardus terbuka rak atas, diurutkan dari baris terdepan ke belakang")]
+    public List<GameObject> stokBotolRak = new();
+    public Transform kardusStokRakAtas;
 
     [Tooltip("Titik berdiri di samping Meja Infeed untuk meletakkan peti botol")]
     public Vector3 posisiTaruhPeti = new Vector3(0.68f, 0f, -0.95f);
@@ -46,9 +53,11 @@ public class OperatorController : MonoBehaviour
     public Vector3 posisiAmbilKardus = new Vector3(-2.30f, 0f, -1.85f);
     public Vector3 titikLihatKardus = new Vector3(-2.70f, 0.30f, -2.10f);
 
-    [Tooltip("Titik berdiri di samping Kotak Penampung OK saat mengemas botol OK ke dalam kardus")]
-    public Vector3 posisiKotakOk = new Vector3(0.60f, 0f, -0.68f);
-    public Vector3 titikLihatKotakOk = new Vector3(0.60f, 0.53f, -0.18f);
+    [Tooltip("Titik berdiri di samping Kotak Penampung OK & Meja Pengemasan Kardus")]
+    public Vector3 posisiKotakOk = new Vector3(0.58f, 0f, -0.64f);
+    public Vector3 titikLihatKotakOk = new Vector3(0.82f, 0.65f, -0.18f);
+    public Vector3 titikTaruhKardusMeja = new Vector3(1.04f, 0.772f, -0.18f);
+    public Transform mejaPengemasan;
 
     [Tooltip("Titik berdiri di dekat Palet Penumpukan (Finished Goods Staging Area) untuk menyimpan kardus jadi")]
     public Vector3 posisiPaletStaging = new Vector3(-2.35f, 0f, -1.30f);
@@ -69,8 +78,9 @@ public class OperatorController : MonoBehaviour
     float yawAwal, yaw;
     Vector3 posisi;
     readonly List<GameObject> botolPeti = new();
+    readonly List<GameObject> botolPetiRak = new();
     readonly List<GameObject> kardusDiPalet = new();
-    GameObject dibawa, petiDibawa, kardusDibawa;
+    GameObject dibawa, petiDibawa, kardusDibawa, botolStokDibawa;
 
     public ModeOperator ModeKerja { get; private set; } = ModeOperator.Setup;
     public string Tugas { get; private set; } = "Menunggu START";
@@ -78,6 +88,8 @@ public class OperatorController : MonoBehaviour
     public int JumlahRestock { get; private set; }
     public int SisaPeti { get { int n = 0; foreach (var b in botolPeti) if (b.activeSelf) n++; return n; } }
     public int KapasitasPeti => botolPeti.Count;
+    public int SisaStokRak { get { int n = 0; foreach (var b in stokBotolRak) if (b && b.activeSelf) n++; return n; } }
+    public int KapasitasStokRak => stokBotolRak.Count;
 
     void Awake()
     {
@@ -96,7 +108,18 @@ public class OperatorController : MonoBehaviour
         templatKardus = Cari(root, "karton_pack_01");
         paletStaging = Cari(root, "pallet_empty");
 
-        for (int i = 1; i <= 12; i++) botolPeti.Add(Cari(root, "crate_bottle_" + i.ToString("00")).gameObject);
+        for (int i = 1; i <= 12; i++)
+        {
+            var cb = Cari(root, "crate_bottle_" + i.ToString("00"));
+            if (cb) botolPeti.Add(cb.gameObject);
+            if (petiRakGroup)
+            {
+                var sb = Cari(petiRakGroup, "shelf_bottle_" + i.ToString("00"));
+                if (sb) botolPetiRak.Add(sb.gameObject);
+            }
+        }
+        SiapkanKardusStokRakAtas(root);
+        SiapkanMejaPengemasanKardus(root);
 
         // posisi dan arah badan awal (pose bind), dipakai untuk menggerakkan grup secara kaku
         var hips = an.GetBoneTransform(HumanBodyBones.Hips);
@@ -116,22 +139,23 @@ public class OperatorController : MonoBehaviour
     GameObject kardusTerbuka;
     Renderer[] kulitKardus;
     Transform botolKemasan;
-    bool kendaliTanganKemas;
+    bool kendaliTanganKemas, sedangDiMejaKardus;
     Vector3 targetGenggam;
     Quaternion rotasiBotolKemas;
-    float bobotPegang, sudutMenunduk;
+    float bobotPegang, bobotTanganKemas, sudutMenunduk;
 
     void OnAnimatorIK(int layerIndex)
     {
         if (!an.isHuman) return;
-        var barang = petiDibawa ? petiDibawa : kardusDibawa;
+        var barang = petiDibawa ? petiDibawa : (sedangDiMejaKardus ? null : kardusDibawa);
         bobotPegang = Mathf.MoveTowards(bobotPegang, barang ? 1f : 0f, Time.deltaTime * 4f);
-        if (!barang) return;
-        var bounds = BatasBarang(barang);
+        bobotTanganKemas = Mathf.MoveTowards(bobotTanganKemas, kendaliTanganKemas ? 1f : 0f, Time.deltaTime * 6f);
+        if (!barang && bobotTanganKemas <= 0.001f) return;
+
         var kanan = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
-        Vector3 tengah = bounds.center + Vector3.up * bounds.extents.y * 0.25f;
-        float lebar = Mathf.Abs(kanan.x) * bounds.extents.x + Mathf.Abs(kanan.z) * bounds.extents.z + 0.025f;
-        float nunduk = kendaliTanganKemas ? Mathf.Clamp((an.GetBoneTransform(HumanBodyBones.Chest).position.y - targetGenggam.y) * 40f, 0f, 38f) : 0f;
+        float nunduk = kendaliTanganKemas
+            ? Mathf.Clamp((an.GetBoneTransform(HumanBodyBones.Chest).position.y - targetGenggam.y) * 40f, -18f, 38f)
+            : 0f;
         sudutMenunduk = Mathf.Lerp(sudutMenunduk, nunduk, 1f - Mathf.Exp(-12f * Time.deltaTime));
         var spine = an.GetBoneTransform(HumanBodyBones.Spine);
         if (spine && spine.parent)
@@ -141,10 +165,24 @@ public class OperatorController : MonoBehaviour
         }
         an.SetLookAtWeight(kendaliTanganKemas ? 0.65f : 0f, 0.05f, 0.8f, 0.8f, 0.6f);
         if (kendaliTanganKemas) an.SetLookAtPosition(targetGenggam);
-        AturTangan(AvatarIKGoal.LeftHand, tengah - kanan * lebar, bobotPegang);
-        AturTangan(AvatarIKGoal.RightHand, kendaliTanganKemas
-            ? targetGenggam - (pegangan.position - an.GetBoneTransform(HumanBodyBones.RightHand).position)
-            : tengah + kanan * lebar, bobotPegang);
+
+        if (barang)
+        {
+            var bounds = BatasBarang(barang);
+            Vector3 tengah = bounds.center + Vector3.up * bounds.extents.y * 0.25f;
+            float lebar = Mathf.Abs(kanan.x) * bounds.extents.x + Mathf.Abs(kanan.z) * bounds.extents.z + 0.025f;
+            AturTangan(AvatarIKGoal.LeftHand, tengah - kanan * lebar, bobotPegang);
+            AturTangan(AvatarIKGoal.RightHand, kendaliTanganKemas
+                ? targetGenggam - (pegangan.position - an.GetBoneTransform(HumanBodyBones.RightHand).position)
+                : tengah + kanan * lebar, Mathf.Max(bobotPegang, bobotTanganKemas));
+        }
+        else
+        {
+            AturTangan(AvatarIKGoal.LeftHand, tanganKiri.position, 0f);
+            AturTangan(AvatarIKGoal.RightHand,
+                targetGenggam - (pegangan.position - an.GetBoneTransform(HumanBodyBones.RightHand).position),
+                bobotTanganKemas);
+        }
     }
 
     void LateUpdate()
@@ -204,9 +242,11 @@ public class OperatorController : MonoBehaviour
         an.speed = kecepatanAnimasi;
         simulasi.infeedOtomatis = false;
         // Kondisi Awal (Initial State): Meja infeed di samping mesin KOSONG (belum ada peti & botol)
-        // sedangkan peti berisi botol kosong berada di Rak Penyimpanan Besi (lantai atas sebelah kanan)
+        // sedangkan SELURUH container botol kosong di rak paling atas sudah terisi penuh botol kosong sedari awal
         SetPetiMejaAktif(false);
         if (petiRakGroup) petiRakGroup.gameObject.SetActive(true);
+        SetBotolPetiRakAktif(true);
+        IsiUlangStokBotolRak(false);
         StartCoroutine(Kerja());
     }
 
@@ -214,6 +254,173 @@ public class OperatorController : MonoBehaviour
     {
         if (petiMejaBody) petiMejaBody.gameObject.SetActive(aktif);
         foreach (var b in botolPeti) b.SetActive(aktif);
+    }
+
+    void SetBotolPetiRakAktif(bool aktif)
+    {
+        foreach (var b in botolPetiRak) if (b) b.SetActive(aktif);
+    }
+
+    void SiapkanKardusStokRakAtas(Transform root)
+    {
+        // Sembunyikan model kardus coklat tertutup lama di rak paling atas (carton_box_07 & carton_box_08)
+        var box07 = Cari(root, "carton_box_07");
+        if (box07) { box07.localScale = Vector3.zero; box07.gameObject.SetActive(false); }
+        var box08 = Cari(root, "carton_box_08");
+        if (box08) { box08.localScale = Vector3.zero; box08.gameObject.SetActive(false); }
+
+        kardusStokRakAtas = Cari(root, "kardus_stok_rak_atas");
+        if (!kardusStokRakAtas)
+            kardusStokRakAtas = BuatKardusStokRakAtasProsedural(root);
+
+        // Pastikan spare_crate_01 dan spare_crate_02 di rak atas juga terisi penuh 12 botol kosong sedari awal
+        PastikanBotolKontainerRak(root, "spare_crate_01_bottles", new Vector3(-2.05f, 0.62f, -2.75f), "spare_01_bottle");
+        PastikanBotolKontainerRak(root, "spare_crate_02_bottles", new Vector3(-2.05f, 0.84f, -2.75f), "spare_02_bottle");
+
+        stokBotolRak.Clear();
+        for (int i = 1; i <= 12; i++)
+        {
+            var tr = Cari(kardusStokRakAtas, "stok_botol_rak_" + i.ToString("00"));
+            if (tr)
+            {
+                tr.gameObject.SetActive(true);
+                stokBotolRak.Add(tr.gameObject);
+            }
+        }
+        SetBotolPetiRakAktif(true);
+
+        if (simulasi)
+        {
+            simulasi.KapasitasStokRakAtas = stokBotolRak.Count;
+            simulasi.SisaStokRakAtas = SisaStokRak;
+        }
+    }
+
+    void SiapkanMejaPengemasanKardus(Transform root)
+    {
+        mejaPengemasan = Cari(root, "meja_pengemasan_kardus");
+        if (mejaPengemasan) return;
+
+        var grupPeti = root.Find("Peti") ?? root;
+        var mejaInfeedAsli = Cari(root, "crate_table");
+        if (mejaInfeedAsli)
+        {
+            var go = Instantiate(mejaInfeedAsli.gameObject, grupPeti);
+            go.name = "meja_pengemasan_kardus";
+            go.transform.localPosition = new Vector3(1.08f, -0.03f, -0.18f);
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = new Vector3(0.92f, 1f, 1f);
+            go.SetActive(true);
+            mejaPengemasan = go.transform;
+        }
+    }
+
+    void PastikanBotolKontainerRak(Transform root, string namaGrup, Vector3 posLokal, string prefixBotol)
+    {
+        var grupBotol = Cari(root, namaGrup);
+        if (grupBotol)
+        {
+            grupBotol.gameObject.SetActive(true);
+            foreach (Transform c in grupBotol) c.gameObject.SetActive(true);
+            return;
+        }
+
+        var roomProps = Cari(root, "room_props") ?? root;
+        var go = new GameObject(namaGrup);
+        go.transform.SetParent(roomProps, false);
+        go.transform.localPosition = posLokal;
+        go.transform.localRotation = Quaternion.identity;
+
+        GameObject templatBotolKosong = botolPeti.Count > 0 ? botolPeti[0] : (botolPetiRak.Count > 0 ? botolPetiRak[0] : null);
+        float[] barisZ = { 0.10f, 0.00f, -0.10f };
+        float[] kolomX = { -0.15f, -0.05f, 0.05f, 0.15f };
+        int idx = 0;
+        for (int r = 0; r < barisZ.Length; r++)
+        {
+            for (int c = 0; c < kolomX.Length; c++)
+            {
+                idx++;
+                if (!templatBotolKosong) continue;
+                var b = Instantiate(templatBotolKosong, go.transform);
+                b.name = prefixBotol + "_" + idx.ToString("00");
+                b.transform.localPosition = new Vector3(kolomX[c], 0.006f, barisZ[r]);
+                b.transform.localRotation = Quaternion.identity;
+                b.transform.localScale = Vector3.one;
+                b.SetActive(true);
+            }
+        }
+    }
+
+    Transform BuatKardusStokRakAtasProsedural(Transform root)
+    {
+        var roomProps = Cari(root, "room_props") ?? root;
+        var go = new GameObject("kardus_stok_rak_atas");
+        go.transform.SetParent(roomProps, false);
+        go.transform.localPosition = new Vector3(-1.48f, 0.62f, -2.68f);
+        go.transform.localRotation = Quaternion.identity;
+
+        // Samakan bentuk wadah tengah dengan peti botol di samping kirinya (shelf_filled_crate / shelf_crate_body)
+        Transform templatCrateBody = petiRakGroup ? Cari(petiRakGroup, "shelf_crate_body") : petiMejaBody;
+        if (templatCrateBody)
+        {
+            var crateBody = Instantiate(templatCrateBody.gameObject, go.transform);
+            crateBody.name = "stok_crate_body";
+            foreach (var col in crateBody.GetComponentsInChildren<Collider>()) Destroy(col);
+            crateBody.transform.localPosition = Vector3.zero;
+            crateBody.transform.localRotation = Quaternion.identity;
+            crateBody.transform.localScale = Vector3.one;
+            crateBody.SetActive(true);
+        }
+
+        // 12 botol kosong (3 baris x 4 kolom) dari baris terdepan (+Z) ke belakang (-Z)
+        GameObject templatBotolKosong = botolPeti.Count > 0 ? botolPeti[0] : (botolPetiRak.Count > 0 ? botolPetiRak[0] : null);
+        float[] barisZ = { 0.10f, 0.00f, -0.10f };
+        float[] kolomX = { -0.15f, -0.05f, 0.05f, 0.15f };
+        int idx = 0;
+        for (int r = 0; r < barisZ.Length; r++)
+        {
+            for (int c = 0; c < kolomX.Length; c++)
+            {
+                idx++;
+                if (!templatBotolKosong) continue;
+                var b = Instantiate(templatBotolKosong, go.transform);
+                b.name = "stok_botol_rak_" + idx.ToString("00");
+                b.transform.localPosition = new Vector3(kolomX[c], 0.006f, barisZ[r]);
+                b.transform.localRotation = Quaternion.identity;
+                b.transform.localScale = Vector3.one;
+                b.SetActive(true);
+            }
+        }
+        return go.transform;
+    }
+
+    // Mengambil botol kosong berurutan dari baris terdepan/terdekat ke belakang
+    GameObject AmbilBotolStokRakTerdepan(out int indeks)
+    {
+        for (int i = 0; i < stokBotolRak.Count; i++)
+        {
+            if (stokBotolRak[i] && stokBotolRak[i].activeSelf)
+            {
+                indeks = i;
+                return stokBotolRak[i];
+            }
+        }
+        indeks = -1;
+        return null;
+    }
+
+    // Mengaktifkan kembali seluruh botol di dalam kardus rak atas agar selalu tersedia (Always Available)
+    public void IsiUlangStokBotolRak(bool catatReplenish)
+    {
+        foreach (var b in stokBotolRak)
+            if (b) b.SetActive(true);
+
+        if (simulasi)
+        {
+            simulasi.KapasitasStokRakAtas = stokBotolRak.Count;
+            simulasi.SisaStokRakAtas = SisaStokRak;
+            if (catatReplenish) simulasi.JumlahAutoReplenishRak++;
+        }
     }
 
     IEnumerator Kerja()
@@ -324,15 +531,22 @@ public class OperatorController : MonoBehaviour
 
     IEnumerator SiklusAmbilPetiDariRak(float t0)
     {
+        // Seluruh container botol kosong di rak sudah berisi penuh botol kosong sedari awal.
+        // Operator langsung berjalan ke rak, mengangkat container berisi 12 botol kosong,
+        // lalu memindahkannya langsung ke meja pengisian (Meja Infeed) tanpa memindahkan botol satu per satu di rak.
+        if (petiRakGroup) petiRakGroup.gameObject.SetActive(true);
+        SetBotolPetiRakAktif(true);
+        IsiUlangStokBotolRak(false);
+
         Tugas = "Setup: Jalan ke Rak Penyimpanan";
-        StatusMesin.I.Kabar("SETUP: Operator mengambil peti botol kosong dari rak penyimpanan...");
+        StatusMesin.I.Kabar("SETUP: Operator mengambil peti berisi botol kosong dari rak penyimpanan...");
 
         yield return JalanKe(new Vector3(0.45f, 0f, -1.35f));
         yield return JalanKe(posisiRakPeti);
         yield return Hadap(titikLihatRakPeti);
         simulasi.SetupTime = Time.time - t0;
 
-        // Animasi mengambil / mengangkat peti botol dari rak atas
+        // Langsung angkat peti yang sudah terisi penuh 12 botol kosong dari rak atas
         Tugas = "Setup: Mengangkat peti dari rak";
         Main("pick");
         yield return Tunggu(SaatPegang);
@@ -341,9 +555,16 @@ public class OperatorController : MonoBehaviour
         yield return Tunggu(DurasiAmbil - SaatPegang);
         simulasi.SetupTime = Time.time - t0;
 
-        // Berjalan membawa peti menuju meja infeed di samping mesin
+        // Berjalan membawa peti berisi botol kosong menuju meja infeed di samping mesin
         Tugas = "Setup: Membawa peti ke Meja Infeed";
         yield return JalanKe(new Vector3(0.45f, 0f, -1.35f));
+
+        // AUTO-REPLENISH (ALWAYS AVAILABLE): Saat operator berjalan kembali ke mesin,
+        // aktifkan kembali peti berisi 12 botol kosong di rak atas agar stok di rak selalu penuh dan tersedia
+        if (petiRakGroup) petiRakGroup.gameObject.SetActive(true);
+        SetBotolPetiRakAktif(true);
+        IsiUlangStokBotolRak(true);
+
         yield return JalanKe(posisiTaruhPeti);
         yield return Hadap(titikLihatMejaPeti);
         simulasi.SetupTime = Time.time - t0;
@@ -376,81 +597,96 @@ public class OperatorController : MonoBehaviour
         BuatKardusDibawa();
         yield return Tunggu(DurasiAmbil - SaatPegang);
 
-        // 2. Berjalan membawa kardus ke dekat Kotak Penampung OK
-        Tugas = "Pengemasan ke Kardus (Ke Kotak OK)";
+        // 2. Berjalan membawa kardus ke Meja Pengemasan di depan rak penampungan (sebelah container botol kosong)
+        Tugas = "Pengemasan ke Kardus (Ke Meja Pengemasan)";
         yield return JalanKe(new Vector3(-1.60f, 0f, -1.35f));
-        yield return JalanKe(new Vector3(0.60f, 0f, -1.35f));
+        yield return JalanKe(new Vector3(0.58f, 0f, -1.35f));
         yield return JalanKe(posisiKotakOk);
-        yield return Hadap(titikLihatKotakOk);
+        yield return Hadap(titikTaruhKardusMeja);
         simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
 
-        // 3. Memindahkan botol-botol OK dari Kotak OK ke dalam kardus kemasan & menutup kardus
-        Main("idle");
-        // Kardus di sisi kiri, sehingga tangan kanan bebas menjangkau tampungan.
-        if (kardusDibawa) kardusDibawa.transform.position -= Quaternion.Euler(0f, yaw, 0f) * Vector3.right * 0.24f;
+        // Letakkan kardus kosong di atas Meja Pengemasan dan buka tutup kardus
+        Tugas = "Pengemasan ke Kardus (Taruh kardus di meja)";
+        Main("place");
+        yield return Tunggu(SaatLepas);
+        TaruhKardusDiMejaPengemasan();
         BukaKardusKemasan();
+        yield return Tunggu(DurasiTaruh - SaatLepas);
+        Main("return");
+        yield return Tunggu(DurasiKembali);
+
+        // 3. Memindahkan botol-botol OK dari Kotak OK ke dalam kardus di atas meja pengemasan
+        yield return Hadap(titikLihatKotakOk);
+        Main("idle");
+        var batasKardusMeja = BatasBarang(kardusDibawa);
+        float[] offsetKolomKardus = { -0.105f, -0.035f, 0.035f, 0.105f };
+        float[] offsetBarisKardus = { -0.072f, 0.000f, 0.072f };
+        float dasarKardusMeja = batasKardusMeja.min.y + 0.008f;
+
         var botolOk = simulasi.BotolOkUntukDikemas();
         int nomor = 0;
         foreach (var botol in botolOk)
         {
             if (!botol || !kardusDibawa) continue;
-            Tugas = "Mengemas botol OK " + (++nomor) + "/" + botolOk.Length;
-            var batas = BatasBarang(kardusDibawa);
+            int idxSlot = nomor++;
+            Tugas = "Mengemas botol OK " + nomor + "/" + botolOk.Length;
             Vector3 posisiAmbil = botol.transform.position;
             Quaternion rotasiAmbil = botol.transform.rotation;
-            targetGenggam = pegangan.position;
+            if (nomor == 1) targetGenggam = pegangan.position;
             rotasiBotolKemas = rotasiAmbil;
             kendaliTanganKemas = true;
-            // Lewat sisi kanan kardus dulu, baru turun ke botol di tampungan.
-            Vector3 samping = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
-            float lebar = Mathf.Abs(samping.x) * batas.extents.x + Mathf.Abs(samping.z) * batas.extents.z;
-            float tinggiAman = Mathf.Max(batas.max.y + 0.23f, posisiAmbil.y + 0.23f);
-            Vector3 luar = batas.center + samping * (lebar + 0.14f);
-            luar.y = tinggiAman;
-            if (nomor == 1) yield return GerakkanGenggaman(luar, 0.3f, rotasiAmbil);
+
+            int kol = idxSlot % 4;
+            int baris = (idxSlot / 4) % 3;
+            int lapis = idxSlot / 12;
+            Vector3 posSlotKardus = new Vector3(
+                batasKardusMeja.center.x + offsetKolomKardus[kol],
+                dasarKardusMeja + TinggiLeher + lapis * 0.22f,
+                batasKardusMeja.center.z + offsetBarisKardus[baris]);
+
+            float tinggiAman = Mathf.Max(batasKardusMeja.max.y + 0.20f, posisiAmbil.y + 0.22f);
             Vector3 atasTampungan = posisiAmbil; atasTampungan.y = tinggiAman;
-            yield return GerakkanGenggaman(atasTampungan, 0.35f, rotasiAmbil);
-            yield return GerakkanGenggaman(posisiAmbil, 0.35f, rotasiAmbil);
+            yield return GerakkanGenggaman(atasTampungan, 0.28f, rotasiAmbil);
+            yield return GerakkanGenggaman(posisiAmbil, 0.28f, rotasiAmbil);
+
             // Genggam pada leher botol. Botol mengikuti tulang tangan sejak titik ini.
             botolKemasan = botol.transform;
+            PastikanCairanBotolTerlihat(botolKemasan);
             botolKemasan.SetParent(pegangan, true);
             botolKemasan.localPosition = Vector3.zero;
-            yield return new WaitForSeconds(0.08f);
-            yield return GerakkanGenggaman(atasTampungan, 0.4f, Quaternion.identity);
+            yield return new WaitForSeconds(0.05f);
+            yield return GerakkanGenggaman(atasTampungan, 0.30f, Quaternion.identity);
 
-            Vector3 atasKardus = batas.center; atasKardus.y = tinggiAman;
-            yield return GerakkanGenggaman(atasKardus, 0.45f, Quaternion.identity);
-            Vector3 masuk = batas.center; masuk.y = batas.max.y + 0.08f;
-            yield return GerakkanGenggaman(masuk, 0.4f, Quaternion.identity);
-            // Lepas setelah botol masuk dari bukaan atas; penghitung tetap diselesaikan sekali per kardus.
-            botolKemasan.SetParent(kardusDibawa.transform, true);
-            botol.SetActive(false);
+            Vector3 atasSlotKardus = new Vector3(posSlotKardus.x, tinggiAman, posSlotKardus.z);
+            yield return GerakkanGenggaman(atasSlotKardus, 0.34f, Quaternion.identity);
+            yield return GerakkanGenggaman(posSlotKardus, 0.28f, Quaternion.identity);
+
+            // Botol diletakkan berdiri rapi di dalam kardus terbuka dan TETAP TERLIHAT (SetActive(true)) beserta isi air oranyenya
+            botolKemasan.SetParent(kardusTerbuka ? kardusTerbuka.transform : kardusDibawa.transform, true);
+            botolKemasan.SetPositionAndRotation(posSlotKardus, Quaternion.identity);
+            botolKemasan.localScale = Vector3.one;
+            PastikanCairanBotolTerlihat(botolKemasan);
+            botol.SetActive(true);
             botolKemasan = null;
-            yield return GerakkanGenggaman(atasKardus, 0.3f, Quaternion.identity);
+            yield return GerakkanGenggaman(atasSlotKardus, 0.22f, Quaternion.identity);
             simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
         }
-        if (kardusDibawa)
-        {
-            var b = BatasBarang(kardusDibawa);
-            var kanan = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
-            float lebar = Mathf.Abs(kanan.x) * b.extents.x + Mathf.Abs(kanan.z) * b.extents.z;
-            Vector3 luar = b.center + kanan * (lebar + 0.06f); luar.y = targetGenggam.y;
-            yield return GerakkanGenggaman(luar, 0.25f, Quaternion.identity);
-            yield return GerakkanGenggaman(b.center + kanan * (lebar + 0.025f), 0.25f, Quaternion.identity);
-        }
         kendaliTanganKemas = false;
+
+        // Tutup kardus di atas meja pengemasan lalu angkat kembali kardus yang sudah terisi
+        yield return Hadap(titikTaruhKardusMeja);
         TutupKardusKemasan();
-        Tugas = "Pengemasan ke Kardus (Menutup kardus)";
-        Main("place");
-        yield return Tunggu(DurasiTaruh);
+        Tugas = "Pengemasan ke Kardus (Menutup & angkat kardus)";
         int jmlOk = simulasi.KemasBotolOkKeKardus();
-        StatusMesin.I.Kabar(jmlOk + " botol OK selesai dikemas satu per satu.");
-        Main("idle");
-        yield return new WaitForSeconds(0.5f);
+        StatusMesin.I.Kabar(jmlOk + " botol OK selesai dikemas ke kardus di meja pengemasan.");
+        Main("pick");
+        yield return Tunggu(SaatPegang);
+        AngkatKardusDariMejaPengemasan();
+        yield return Tunggu(DurasiAmbil - SaatPegang);
 
         // 4. Mengangkat kardus jadi dan memindahkannya ke Palet Samping (Finished Goods Staging Area)
         Tugas = "Pengemasan ke Kardus (Simpan ke Palet)";
-        yield return JalanKe(new Vector3(0.60f, 0f, -1.35f));
+        yield return JalanKe(new Vector3(0.58f, 0f, -1.35f));
         yield return JalanKe(posisiPaletStaging);
         yield return Hadap(titikLihatPaletStaging);
         simulasi.BatchCycleTime = Time.time - waktuMulaiBatch;
@@ -484,6 +720,7 @@ public class OperatorController : MonoBehaviour
     {
         if (kardusDibawa) Destroy(kardusDibawa);
         if (!templatKardus) return;
+        sedangDiMejaKardus = false;
         kardusDibawa = Instantiate(templatKardus.gameObject);
         kardusDibawa.SetActive(true);
         kardusDibawa.name = "kardus_kemasan_dibawa";
@@ -493,11 +730,32 @@ public class OperatorController : MonoBehaviour
         var arah = Quaternion.Euler(0f, yaw, 0f);
         var hips = an.GetBoneTransform(HumanBodyBones.Hips);
         kardusDibawa.transform.SetPositionAndRotation(hips.position + Vector3.up * 0.04f + arah * Vector3.forward * 0.42f, arah);
+    }
 
+    void TaruhKardusDiMejaPengemasan()
+    {
+        if (!kardusDibawa) return;
+        sedangDiMejaKardus = true;
+        kardusDibawa.transform.SetParent(grup.parent, true);
+        kardusDibawa.transform.SetPositionAndRotation(titikTaruhKardusMeja, Quaternion.identity);
+        var b = BatasBarang(kardusDibawa);
+        if (b.size.y > 0.001f)
+            kardusDibawa.transform.position += Vector3.up * (titikTaruhKardusMeja.y - b.min.y);
+    }
+
+    void AngkatKardusDariMejaPengemasan()
+    {
+        if (!kardusDibawa) return;
+        sedangDiMejaKardus = false;
+        kardusDibawa.transform.SetParent(grup, true);
+        var arah = Quaternion.Euler(0f, yaw, 0f);
+        var hips = an.GetBoneTransform(HumanBodyBones.Hips);
+        kardusDibawa.transform.SetPositionAndRotation(hips.position + Vector3.up * 0.04f + arah * Vector3.forward * 0.42f, arah);
     }
 
     void TaruhKardusDiPalet()
     {
+        sedangDiMejaKardus = false;
         if (kardusDibawa)
         {
             Destroy(kardusDibawa);
@@ -525,9 +783,10 @@ public class OperatorController : MonoBehaviour
         foreach (var renderer in kulitKardus) renderer.enabled = false;
         kardusTerbuka = new GameObject("kardus_terbuka");
         kardusTerbuka.transform.SetParent(kardusDibawa.transform, true);
-        float x = Mathf.Max(0.26f, b.size.x), z = Mathf.Max(0.22f, b.size.z);
-        float y = Mathf.Max(0.22f, b.size.y), tebal = 0.008f;
-        Vector3 pusat = b.center;
+        float x = Mathf.Max(0.32f, b.size.x), z = Mathf.Max(0.24f, b.size.z);
+        float y = 0.165f, tebal = 0.008f;
+        float dasarY = b.min.y;
+        Vector3 pusat = new Vector3(b.center.x, dasarY + y * 0.5f, b.center.z);
         Vector3[] offsets = { new Vector3(0,-y/2,0), new Vector3(-x/2,0,0), new Vector3(x/2,0,0), new Vector3(0,0,-z/2), new Vector3(0,0,z/2) };
         Vector3[] ukuran = { new Vector3(x,tebal,z), new Vector3(tebal,y,z), new Vector3(tebal,y,z), new Vector3(x,y,tebal), new Vector3(x,y,tebal) };
         for (int i = 0; i < offsets.Length; i++)
@@ -537,7 +796,40 @@ public class OperatorController : MonoBehaviour
             panel.transform.SetPositionAndRotation(pusat + offsets[i], Quaternion.identity);
             panel.transform.localScale = ukuran[i];
             panel.transform.SetParent(kardusTerbuka.transform, true);
-            panel.GetComponent<Renderer>().sharedMaterial = material;
+            var rPanel = panel.GetComponent<Renderer>();
+            rPanel.sharedMaterial = material;
+            rPanel.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+    }
+
+    static void PastikanCairanBotolTerlihat(Transform trBotol)
+    {
+        if (!trBotol) return;
+        foreach (Transform anak in trBotol)
+        {
+            if (anak.name.StartsWith("bottle_liquid"))
+            {
+                anak.gameObject.SetActive(true);
+                anak.localPosition = new Vector3(0f, -0.169f, 0f);
+                anak.localRotation = Quaternion.identity;
+                anak.localScale = Vector3.one;
+                var r = anak.GetComponent<Renderer>();
+                if (r)
+                {
+                    r.enabled = true;
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    r.receiveShadows = false;
+                }
+            }
+            else if (anak.name.StartsWith("bottle"))
+            {
+                var r = anak.GetComponent<Renderer>();
+                if (r)
+                {
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    r.receiveShadows = false;
+                }
+            }
         }
     }
 

@@ -145,8 +145,8 @@ public class PemainFPS : MonoBehaviour
                 if (operatorMesin)
                 {
                     GUI.Label(new Rect(18, 146, 405, 22), "Mode Op: " + operatorMesin.ModeKerja + " | " + operatorMesin.Tugas);
-                    GUI.Label(new Rect(18, 168, 405, 22), "Peti Infeed: " + operatorMesin.SisaPeti + "/" + operatorMesin.KapasitasPeti + " botol  |  Kardus Jadi: " + sim.KardusSelesai + " (" + sim.TotalDikemas + " btl)");
-                    GUI.Label(new Rect(18, 188, 405, 22), "Batch Ke-" + Mathf.Max(1, operatorMesin.BatchKe) + "  (Restock Rak: " + operatorMesin.JumlahRestock + "x)");
+                    GUI.Label(new Rect(18, 168, 405, 22), "Peti Infeed: " + operatorMesin.SisaPeti + "/" + operatorMesin.KapasitasPeti + "  |  Stok Rak: " + operatorMesin.SisaStokRak + "/" + operatorMesin.KapasitasStokRak + "  |  Kardus: " + sim.KardusSelesai);
+                    GUI.Label(new Rect(18, 188, 405, 22), "Batch Ke-" + Mathf.Max(1, operatorMesin.BatchKe) + "  (Restock Rak: " + operatorMesin.JumlahRestock + "x | Auto-Refill: " + sim.JumlahAutoReplenishRak + "x)");
                 }
             }
             if (Time.time - st.WaktuPesan < 3.5f)

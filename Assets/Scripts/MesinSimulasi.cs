@@ -111,6 +111,9 @@ public class MesinSimulasi : MonoBehaviour
     public bool BatchCompleted { get; set; }              // True saat 12 botol peti habis & selesai diproses
     public float BatchCycleTime { get; set; }             // Total waktu dari ambil peti di rak hingga kardus di palet
     public float FirstPassYield => (Selesai + TotalReject) > 0 ? (Selesai * 100f / (Selesai + TotalReject)) : 100f;
+    public int SisaStokRakAtas { get; set; } = 12;        // Sisa botol kosong di dalam kardus terbuka rak atas
+    public int KapasitasStokRakAtas { get; set; } = 12;   // Kapasitas penuh kardus stok rak atas (3x4 = 12 botol)
+    public int JumlahAutoReplenishRak { get; set; }       // Berapa kali kardus stok rak atas di-replenish otomatis
 
     public int IsiKotak => diKotak.Count + HitungJatuh(false);
     public int IsiKotakReject => diKotakReject.Count + HitungJatuh(true);
@@ -189,6 +192,7 @@ public class MesinSimulasi : MonoBehaviour
         // botol contoh di scene jadi templat, disembunyikan
         templatBotol.SetActive(false);
         templatCairan.SetActive(false);
+        SiapkanMaterialCairanDanKaca();
 
         aliran = BuatAliran();
 
@@ -593,6 +597,42 @@ public class MesinSimulasi : MonoBehaviour
         b.cairan.localScale = new Vector3(1f, Mathf.Max(0.001f, b.isi), 1f);
     }
 
+    void SiapkanMaterialCairanDanKaca()
+    {
+        if (templatCairan)
+        {
+            var rCairan = templatCairan.GetComponent<Renderer>();
+            if (rCairan && rCairan.sharedMaterial)
+            {
+                var mat = rCairan.sharedMaterial;
+                Color warnaOren = new Color(0.98f, 0.66f, 0.22f, 0.92f);
+                mat.SetColor("_BaseColor", warnaOren);
+                mat.SetColor("_Color", warnaOren);
+                mat.EnableKeyword("_EMISSION");
+                mat.SetColor("_EmissionColor", new Color(0.32f, 0.18f, 0.03f, 1f));
+                mat.SetFloat("_Smoothness", 0.42f);
+                mat.SetFloat("_ZWrite", 1f);
+                mat.SetFloat("_ReceiveShadows", 0f);
+                mat.renderQueue = 3000;
+            }
+        }
+        if (templatBotol)
+        {
+            var rBotol = templatBotol.GetComponent<Renderer>();
+            if (rBotol && rBotol.sharedMaterial)
+            {
+                var matKaca = rBotol.sharedMaterial;
+                Color warnaKaca = new Color(0.93f, 0.97f, 1f, 0.16f);
+                matKaca.SetColor("_BaseColor", warnaKaca);
+                matKaca.SetColor("_Color", warnaKaca);
+                matKaca.SetFloat("_Smoothness", 0.78f);
+                matKaca.SetFloat("_ZWrite", 0f);
+                matKaca.SetFloat("_ReceiveShadows", 0f);
+                matKaca.renderQueue = 3002;
+            }
+        }
+    }
+
     void PasangTutup(Botol b)
     {
         var t = Klon(templatTutup, b.go.transform, new Vector3(0f, 0.06f, 0f));
@@ -799,7 +839,7 @@ public class MesinSimulasi : MonoBehaviour
             teksMes.text = "MES PRODUCTION DASHBOARD\n"
                 + "Status : " + (BatchCompleted ? "BATCH COMPLETED" : st.Mode.ToString().ToUpper()) + "\n"
                 + "Good: " + Selesai + " | Reject: " + TotalReject + " | Boxed: " + TotalDikemas + "\n"
-                + "FPY : " + FirstPassYield.ToString("F1") + "% | Cartons: " + KardusSelesai + "\n"
+                + "FPY : " + FirstPassYield.ToString("F1") + "% | Cartons: " + KardusSelesai + " | ShelfStock: " + SisaStokRakAtas + "/" + KapasitasStokRakAtas + "\n"
                 + "Setup: " + SetupTime.ToString("F1") + "s | BatchCycle: " + BatchCycleTime.ToString("F1") + "s";
         }
     }
