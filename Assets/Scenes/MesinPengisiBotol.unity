@@ -422,6 +422,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: tank_collar
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 73d3688fa2f7e394c8cc3274a8d52b5e, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -856,6 +860,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 2359f7da50141fc4e82ca3564439c361, type: 3}
       propertyPath: m_Name
       value: tank_stand_leg_2
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 2359f7da50141fc4e82ca3564439c361, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2377,6 +2385,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: tank_stand_brace_y2
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 90d48f6c3c8fa0245846e1cee121f624, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3217,6 +3229,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: tank_bracket_4
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: aea07a9603af61c40bc2cfa155eee39d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3921,6 +3937,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: pump
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: ac49e5ae77fc0b04c8ab8260858c30c4, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -4330,6 +4350,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: d9b350f494a2a5b4aa24826c7bf1d1fc, type: 3}
       propertyPath: m_Name
       value: tank_stand_brace_x2
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: d9b350f494a2a5b4aa24826c7bf1d1fc, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -7504,6 +7528,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: hose_clip_2
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 132d49d2f0f70a442a913ab417cb35c3, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7974,6 +8002,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 4e6a658cac9fbe640b7c43df24fbb472, type: 3}
       propertyPath: m_Name
       value: tank_stand_brace_x1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 4e6a658cac9fbe640b7c43df24fbb472, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -10725,6 +10757,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 78576f2083f1078419cd0b1887dd25af, type: 3}
       propertyPath: m_Name
       value: pump_clamp_1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 78576f2083f1078419cd0b1887dd25af, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -13749,6 +13785,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: tank_bracket_2
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 38d7d365c7d054143ad9615dc8d05aca, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -14239,6 +14279,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 8d5bc24e5721bea4ab0930de82c9491e, type: 3}
       propertyPath: m_Name
       value: pump_clamp_2
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 8d5bc24e5721bea4ab0930de82c9491e, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -15507,6 +15551,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: dca9ac789ed187f4b97e5ab29954c711, type: 3}
       propertyPath: m_Name
       value: tank_stand_leg_4
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: dca9ac789ed187f4b97e5ab29954c711, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -18072,6 +18120,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: tank_stand_leg_1
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 97af5becdbaab2740ae2b525cb39a446, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -18890,6 +18942,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 08ee6ef6fdd476e479ca026a480574b6, type: 3}
       propertyPath: m_Name
       value: hose_clip_1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 08ee6ef6fdd476e479ca026a480574b6, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -19748,6 +19804,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: tank_bracket_1
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 39c569022d9026d45814e65e62333e6a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -20126,6 +20186,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: tank_stand_brace_y1
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: c8f1126f7c0e9224784aec7c7d821a42, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -20212,6 +20276,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 5df60d8b692982d46a687ef990652513, type: 3}
       propertyPath: m_Name
       value: tank_bracket_3
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5df60d8b692982d46a687ef990652513, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -21130,6 +21198,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: b58d8490edc34a74b9e21ad797aa628d, type: 3}
       propertyPath: m_Name
       value: pump_bracket
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: b58d8490edc34a74b9e21ad797aa628d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -22296,6 +22368,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: shelf
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 95b5776883baa13448a9d9837cb55113, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -22737,6 +22813,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: eae200d6ba46e5047b5eba87dc411166, type: 3}
       propertyPath: m_Name
       value: tank_stand_leg_3
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: eae200d6ba46e5047b5eba87dc411166, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -23240,7 +23320,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2100020001
 Transform:
   m_ObjectHideFlags: 0
@@ -23250,8 +23330,8 @@ Transform:
   m_GameObject: {fileID: 2100020000}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.65, y: -0.34, z: -0.15}
-  m_LocalScale: {x: 0.036, y: 0.44, z: 0.036}
+  m_LocalPosition: {x: -0.65, y: -0.36, z: -0.15}
+  m_LocalScale: {x: 0.036, y: 0.46, z: 0.036}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 178725283}
@@ -23330,7 +23410,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2100020011
 Transform:
   m_ObjectHideFlags: 0
@@ -23420,7 +23500,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2100020021
 Transform:
   m_ObjectHideFlags: 0
@@ -23430,8 +23510,8 @@ Transform:
   m_GameObject: {fileID: 2100020020}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.65, y: 0.09, z: -0.15}
-  m_LocalScale: {x: 0.052, y: 0.035, z: 0.052}
+  m_LocalPosition: {x: -0.685, y: -0.792, z: -0.22}
+  m_LocalScale: {x: 0.028, y: 0.012, z: 0.028}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 178725283}

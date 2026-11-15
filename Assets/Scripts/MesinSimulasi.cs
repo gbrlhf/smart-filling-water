@@ -193,6 +193,7 @@ public class MesinSimulasi : MonoBehaviour
         templatBotol.SetActive(false);
         templatCairan.SetActive(false);
         SiapkanMaterialCairanDanKaca();
+        RapikanJalurAirBawahTanah(root);
 
         aliran = BuatAliran();
 
@@ -948,6 +949,30 @@ public class MesinSimulasi : MonoBehaviour
         var clip = AudioClip.Create("bip_buzzer_" + kali, data.Length, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
+    }
+
+    static void RapikanJalurAirBawahTanah(Transform root)
+    {
+        if (!root) return;
+        string[] objekMejaPenampungLama =
+        {
+            "shelf",
+            "tank_collar",
+            "tank_bracket_1", "tank_bracket_2", "tank_bracket_3", "tank_bracket_4",
+            "tank_stand_leg_1", "tank_stand_leg_2", "tank_stand_leg_3", "tank_stand_leg_4",
+            "tank_stand_brace_x1", "tank_stand_brace_x2", "tank_stand_brace_y1", "tank_stand_brace_y2",
+            "hose_clip_1", "hose_clip_2",
+            "clean_water_main_riser", "clean_water_floor_supply", "clean_water_pump_coupling",
+            "pump", "pump_bracket", "pump_clamp_1", "pump_clamp_2",
+            "tank", "tank_liquid", "tank_visible_liquid", "tank_glass_window",
+            "tank_window_frame_left", "tank_window_frame_right"
+        };
+        for (int i = 0; i < objekMejaPenampungLama.Length; i++)
+        {
+            var tr = Cari(root, objekMejaPenampungLama[i]);
+            if (tr && tr.gameObject.activeSelf)
+                tr.gameObject.SetActive(false);
+        }
     }
 
     static Transform Cari(Transform t, string n)
