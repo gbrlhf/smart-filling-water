@@ -17,6 +17,25 @@ public enum StatusProduk
 public class MesinSimulasi : MonoBehaviour
 {
     public static MesinSimulasi I { get; private set; }
+    public event System.Action<Botol> BotolSelesaiDiproses;
+    int nomorBotolApi;
+    public int LangkahApi => langkah;
+    public float SudutApi => Mathf.Repeat((langkah + (diamDimulai ? 1f : Mathf.SmoothStep(0f, 1f, tLangkah / Mathf.Max(0.01f, durasiPutar)))) * SudutSlot, 360f);
+    public FillingMachineApi.GPIO GpioApi()
+    {
+        var st = StatusMesin.I;
+        bool listrik = st.AdaListrikKontrol, jalan = st.Mode == ModeMesin.Berjalan;
+        bool putar = jalan && SetupSelesai && !BatchCompleted && tLangkah < durasiPutar;
+        return new FillingMachineApi.GPIO {
+            step = listrik && putar && Mathf.Repeat(Time.time * 16f, 1f) < 0.5f,
+            dir = listrik && jalan, en = listrik && jalan && st.AdaListrikMesin,
+            pompa = listrik && jalan && aliran && aliran.gameObject.activeSelf,
+            buzzer = listrik && Time.time < bunyiSampai,
+            ir = listrik && !putar && slot[SlotDi(SudutIsi, langkah + (diamDimulai ? 1 : 0))] != null,
+            start = listrik && Time.time - startLed < 0.4f,
+            limit = listrik && !putar && Mathf.Repeat(SudutSekarang, 360f) < 0.1f
+        };
+    }
 
     [Header("Waktu (detik)")]
     public float durasiPutar = 1.5f;
@@ -47,6 +66,8 @@ public class MesinSimulasi : MonoBehaviour
 
     public class Botol
     {
+        public int nomorApi, slotApi;
+        public string masukApi, isiMulaiApi, isiSelesaiApi, tutupApi;
         public GameObject go;
         public Transform cairan;
         public Renderer cairanR;
@@ -242,6 +263,7 @@ public class MesinSimulasi : MonoBehaviour
 
     void Start()
     {
+        if (!GetComponent<FillingMachineApi>()) gameObject.AddComponent<FillingMachineApi>();
         // Sesuai Alur 3: Saat awal permainan, meja infeed & turret masih kosong
         // karena operator akan mengambil peti botol kosong dari Rak Penyimpanan Besi terlebih dahulu.
         StatusMesin.I.ModeBerubah += m =>
@@ -467,6 +489,8 @@ public class MesinSimulasi : MonoBehaviour
         bool pompa = ada && u >= 0.4f && u < (0.4f + durasiPompa);
         if (ada)
         {
+            if (u >= 0.4f && bIsi.isiMulaiApi == null) bIsi.isiMulaiApi = FillingMachineApi.Utc();
+            if (u >= 0.4f + durasiPompa && bIsi.isiSelesaiApi == null) bIsi.isiSelesaiApi = FillingMachineApi.Utc();
             float capai = Mathf.Clamp01((u - 0.4f) / 1.8f);
             bIsi.isi = Mathf.Max(bIsi.isi, Mathf.Min(bIsi.targetIsi, capai));
             AturCairan(bIsi);
@@ -517,6 +541,7 @@ public class MesinSimulasi : MonoBehaviour
         }
         if (u >= 1.6f)
         {
+            if (bTutup.tutupApi == null) bTutup.tutupApi = FillingMachineApi.Utc();
             bTutup.bertutup = true;
             bTutup.sudahLewatCapping = true;
         }
@@ -566,7 +591,7 @@ public class MesinSimulasi : MonoBehaviour
 
     Botol BuatBotol(int k)
     {
-        var b = new Botol();
+        var b = new Botol { nomorApi = ++nomorBotolApi, slotApi = k, masukApi = FillingMachineApi.Utc() };
         b.go = new GameObject("botol_slot_" + (k + 1));
         var tr = b.go.transform;
         tr.SetParent(turret, false);
@@ -699,6 +724,7 @@ public class MesinSimulasi : MonoBehaviour
             if (j.t >= 1f)
             {
                 var selesaiBotol = j.b;
+                BotolSelesaiDiproses?.Invoke(selesaiBotol);
                 bool keReject = j.keReject;
                 jatuh.RemoveAt(i);
 

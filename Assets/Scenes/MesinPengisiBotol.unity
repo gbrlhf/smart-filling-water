@@ -20509,6 +20509,7 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
+  - component: {fileID: 2100051000}
   - component: {fileID: 1932996057}
   - component: {fileID: 1932996058}
   - component: {fileID: 1932996059}
@@ -27146,3 +27147,21 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 2523404639805385240, guid: 49565e821e8d9674ea7cf51fe4d61795, type: 3}
+--- !u!114 &2100051000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1932996056}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f9f12bdbf764a1e85220e04665aa90b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FillingMachineApi
+  baseUrl: https://filling-machine-api.zamazzam.me
+  mesinId: mesin-01
+  pengguna: naya
+  intervalTelemetri: 2
+  kirimAktif: 1
+  statusKoneksi: Belum tersambung

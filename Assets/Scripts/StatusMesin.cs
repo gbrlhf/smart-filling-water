@@ -23,6 +23,7 @@ public class StatusMesin : MonoBehaviour
     public ModeMesin Mode { get; private set; } = ModeMesin.Mati;
     public bool Darurat { get; private set; }
     public event System.Action<ModeMesin> ModeBerubah;
+    public event System.Action<string> PesanDicatat;
 
     public string Pesan { get; private set; }
     public float WaktuPesan { get; private set; } = -10f;
@@ -130,5 +131,6 @@ public class StatusMesin : MonoBehaviour
     {
         Pesan = s;
         WaktuPesan = Time.time;
+        PesanDicatat?.Invoke(s);
     }
 }
