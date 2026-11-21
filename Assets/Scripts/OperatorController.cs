@@ -774,9 +774,42 @@ public class OperatorController : MonoBehaviour
         sedangDiMejaKardus = true;
         kardusDibawa.transform.SetParent(grup.parent, true);
         kardusDibawa.transform.SetPositionAndRotation(titikTaruhKardusMeja, Quaternion.identity);
-        var b = BatasBarang(kardusDibawa);
-        if (b.size.y > 0.001f)
-            kardusDibawa.transform.position += Vector3.up * (titikTaruhKardusMeja.y - b.min.y);
+        Bounds kardus = BatasBarang(kardusDibawa);
+        // Perhitungkan dinding kardus terbuka, yang dapat lebih besar dari model tertutup.
+        kardus.size = new Vector3(Mathf.Max(0.438f, kardus.size.x), kardus.size.y, Mathf.Max(0.378f, kardus.size.z));
+        const float celah = 0.04f;
+        float permukaan = titikTaruhKardusMeja.y;
+        if (mejaPengemasan)
+        {
+            Bounds meja = BatasBarang(mejaPengemasan.gameObject);
+            var skala = mejaPengemasan.localScale;
+            skala.x *= Mathf.Max(1f, (kardus.size.x + 0.04f) / Mathf.Max(0.01f, meja.size.x));
+            skala.z *= Mathf.Max(1f, (kardus.size.z + 0.04f) / Mathf.Max(0.01f, meja.size.z));
+            mejaPengemasan.localScale = skala;
+            meja = BatasBarang(mejaPengemasan.gameObject);
+            var mejaPeti = Cari(grup.parent, "crate_table");
+            if (mejaPeti)
+            {
+                Bounds tetangga = BatasBarang(mejaPeti.gameObject);
+                Bounds peti = petiMejaBody ? BatasBarang(petiMejaBody.gameObject) : tetangga;
+                // Pertahankan arah susunan asli: berdampingan sepanjang Z, pusat X sejajar.
+                float sisi = titikTaruhKardusMeja.z >= tetangga.center.z ? 1f : -1f;
+                float tepi = sisi > 0f ? Mathf.Max(tetangga.max.z, peti.max.z) : Mathf.Min(tetangga.min.z, peti.min.z);
+                Vector3 pusatBaru = new Vector3(tetangga.center.x, meja.center.y,
+                    tepi + sisi * (Mathf.Max(meja.extents.z, kardus.extents.z) + celah));
+                mejaPengemasan.position += pusatBaru - meja.center;
+                // Samakan tinggi permukaan kedua meja.
+                mejaPengemasan.position += Vector3.up * (tetangga.max.y - BatasBarang(mejaPengemasan.gameObject).max.y);
+            }
+            meja = BatasBarang(mejaPengemasan.gameObject);
+            var aktual = BatasBarang(kardusDibawa);
+            kardusDibawa.transform.position += new Vector3(meja.center.x - aktual.center.x, 0f, meja.center.z - aktual.center.z);
+            kardus.center = new Vector3(meja.center.x, kardus.center.y, meja.center.z);
+            permukaan = meja.max.y;
+        }
+        var batasNyata = BatasBarang(kardusDibawa);
+        kardusDibawa.transform.position += Vector3.up * (permukaan + 0.005f - batasNyata.min.y);
+        titikTaruhKardusMeja = new Vector3(kardus.center.x, permukaan + 0.005f, kardus.center.z);
     }
 
     void AngkatKardusDariMejaPengemasan()
